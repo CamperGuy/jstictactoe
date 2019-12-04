@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Question 3</title>
+    
+    <style type="text/css">
+    div{
+        font-family: sans-serif;
+    }
+
+    .gameElement{
+        font-size: 4vw;
+        width: 6vw;
+        height: 6vw;
+        margin: 1vw;
+        padding: 1vw;
+        min-height: 25px;
+        min-width: 25px;
+        display: inline-block;
+        vertical-align: top;
+        border-style: solid;
+        border-width: 2px;
+    }
+    
+    .unselected {
+        background: rgb(232, 233, 234);
+    }
+
+    #selectedO{
+        background: rgb(21, 110, 199);
+    }
+    #selectedX{
+        background: rgb(247, 65, 65);
+    }
+
+    #win{
+        background: rgb(255, 255, 0);
+    }
+
+    #text{
+        font-size: 3vw;
+        text-align: center;
+    }
+    #gameboard{
+        text-align: center;
+    }
+    </style>
+
+    <script>
+        var squaresize;
+        var OsTurn = true; // True: Player O    False: Player X
+        var turns = 0; 
+        // Win detection
+        var winStringO = ""; 
+        var winStringX = ""; 
+        var won = false;
+
+        function setup(){
+            /*
+            This single variable adjusts the grid size. It could be defined by the user if wanted
+            but I wasn't sure if that's okay to do.
+            Either way, the grid is generated on the fly.
+            And win detection works on any size (with 1 being the exception. And 0 ofc) (Win-detection
+            works by string comparison. Any better solution, please!)
+            I misread the spec and thought that's what's asked and I had already gotten started with
+            it so I didn't want to throw any work away.
+            Totally didn't take me long and SO didn't stress me out if I was ever even going to
+            finish this. But yeah here it is.
+            */
+            squaresize = 3;
+            
+            // Generate the gameField
+            var generatedRows = 0;
+            while (generatedRows < squaresize){
+                generateRow(squaresize, generatedRows);
+                winStringO += "O";
+                winStringX += "X";
+                generatedRows++;
+            }
+            console.log("O Win-String: " + winStringO);
+            console.log("X Win-String: " + winStringX);
+            document.getElementById("text").innerHTML = "Starting: O"
+        }
+
+        function generateRow(rowSize, rowIndex){
+            var row = document.createElement("div");
+
+            for (var generatedRow = 0; generatedRow < rowSize; generatedRow++){
+                var emptybox = document.createElement("div");
+                emptybox.className = "gameElement unselected";     
+
+                // Set the coordinates as attributes
+                emptybox.setAttribute("x", rowIndex);
+                emptybox.setAttribute("y", generatedRow);
+                
+                emptybox.onclick = function() {select(this);}
+                
+                row.appendChild(emptybox);
+            }
+            document.getElementById("gameboard").appendChild(row);
+        }
+
+        function select(box){
+            // Only do anything if game is not won and box has not yet been clicked
+            if (!won && box.innerHTML != "X" && box.innerHTML != "O"){
+                if (OsTurn){
+                    box.innerHTML = "O";
+                    box.id="selectedO";
+                    OsTurn = false;
+                }
+                else if (!OsTurn){
+                    box.innerHTML = "X";
+                    box.id = "selectedX";
+                    OsTurn = true;
+                }
+                turns++;
+                update();
+            }
+        }
+
+        function update(){
+            // Update the caption above the Game field
+            if (OsTurn)
+                document.getElementById("text").innerHTML = "O's turn";
+            else   
+                document.getElementById("text").innerHTML = "X's turn";
+            
+            if (turns > 1)
+                checkWin();
+            
+            if (turns == (squaresize * squaresize) && !won)
+                document.getElementById("text").innerHTML = "It's a Tie!";
+        }
+
+        function checkWin(){
+            // Declare the played-strings
+            var diagonalLRString = "";
+            var diagonalRLString = "";
+            var verticalString = "";
+            var horizontalString = "";
+
+            // Loop through the X dimension
+            for(var x = 0; x < squaresize; x++){
+                // Check both ways of diagonals (L and R standing for the order. so LR being top left to bottom right)
+                var diagonalLRBox = getBox(x, x);
+                var diagonalRLBox = getBox(((squaresize -x) - 1), x);
+                
+                diagonalLRString += diagonalLRBox.innerHTML;
+                diagonalRLString += diagonalRLBox.innerHTML;
+                
+                // Loop through the Y dimension
+                for (var y = 0; y < squaresize; y++){
+                    // Append each horizontal's box' content to the string
+                    var horizontalBox = getBox(y, x);
+                    horizontalString += horizontalBox.innerHTML;
+                    // Check if game as been won
+                    if (horizontalString == winStringO)
+                        win("O", 0, horizontalBox);
+                    else if (horizontalString == winStringX)
+                        win("X", 0, horizontalBox);
+                    
+                    // Append each horizontal's box' content to the string
+                    var verticalBox = getBox(x, y);
+                    verticalString += verticalBox.innerHTML;
+                    // Check if game as been won
+                    if (verticalString == winStringO)
+                        win("O", 1, verticalBox);
+                    else if (verticalString == winStringX)
+                        win("X", 1, verticalBox);
+                }
+                // Check if any diagonal games have been won
+                if (diagonalLRString == winStringO)
+                    win("O", 2, diagonalLRBox);
+                else if (diagonalLRString == winStringX)
+                    win("X", 2, diagonalLRBox);
+
+                if (diagonalRLString == winStringO)
+                    win("O", 3, diagonalRLBox);
+                
+                else if (diagonalRLString == winStringX)
+                    win("X", 3, diagonalRLBox);
+
+                // Reset the strings for the next run
+                verticalString = "";
+                horizontalString = "";
+            }
+            diagonalLRString = "";
+            diagonalRLString = "";
+        }
+
+        function win(winner, winType, lastBox){
+            var winTypeString = "";
+            var lastX = lastBox.getAttribute("x");
+            var lastY = lastBox.getAttribute("y");
+            switch(winType){
+                case 0:
+                    winTypeString = "Vertical";
+                    for (var i = 0; i < squaresize; i++){
+                        getBox(i, lastY).id = ("win");
+                    }
+                    break;
+                case 1:
+                    winTypeString = "Horizontal";
+                    for (var i = 0; i < squaresize; i++){
+                        getBox(lastX, i).id = ("win");
+                    }
+                    break;
+                case 2:
+                    winTypeString = "Diagonal Top-Left to Bottom-Right";
+                    for (var i = 0; i < squaresize; i++){
+                        getBox(i, i).id = ("win");
+                    }
+                    break;
+                case 3:
+                    winTypeString = "Diagonal Top-Right to Bottom-Left";
+                    for (var i = 0; i < squaresize; i++){
+                        getBox(((squaresize - i) - 1), i).id = ("win");
+                    }
+                    break;
+            }
+            console.log("Winner: " + winner + "\nBy: " + winTypeString);
+
+            won = true;
+            document.getElementById("text").innerHTML = winner + " has won!";
+        }
+        
+        // Returns a box based by its dimensions
+        function getBox(x, y){
+            var box = document.querySelector("[x='" + x + "'][y='" + y + "']");
+            if (box != null)
+                return box;
+        }
+    </script>
+</head>
+
+<!--What is a HTML?-->
+<body onload="setup()">
+    <div id="text"></div>
+    <div id="gameboard"></div>
+</body>
+
+</html>
